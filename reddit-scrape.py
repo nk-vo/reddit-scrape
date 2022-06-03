@@ -1,13 +1,13 @@
 from RedDownloader import RedDownloader
 import praw
 
-# url = "https://www.reddit.com/r/PinayTikTok/comments/v35mqg/nikki_velayo/"
 subreddit_name = input("Enter subreddit: ")
 url = "https://www.reddit.com"
 
-reddit = praw.Reddit(client_id="9OfqB_EB3QrW-kQzNx7TKw",
-                     client_secret="GtVZkIfefw75-AnBiu5QKS3WCaer-A",
-                     user_agent="funtimeahead")
+#get those parameters from reddit developer account
+reddit = praw.Reddit(client_id=CLIENT_ID,
+                     client_secret=CLIENT_SECRET,
+                     user_agent=USER_AGENT)
 
 hot_posts = reddit.subreddit(subreddit_name).new(limit=100)
 for post in hot_posts:
