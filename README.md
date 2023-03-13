@@ -6,22 +6,25 @@ The script also keeps track of the downloaded posts for each subreddit in a JSON
 
 ## Requirements
 
-Python 3
-PRAW API wrapper for Reddit (praw module)
-RedDownloader module (RedDownloader module)
-dotenv module (python-dotenv module)
+* Python 3
+* PRAW API wrapper for Reddit (praw module)
+* RedDownloader module (RedDownloader module)
+* dotenv module (python-dotenv module)
 
 ## Setup
 
-Clone or download the script to a directory on your computer.
-Install the required modules using pip.
-Create a .env file in the same directory as the script with the following variables:
-CLIENT_ID: Reddit API client ID
-CLIENT_SECRET: Reddit API client secret
-USER_AGENT: Reddit API user agent
-SUBREDDIT_LIST: Comma-separated list of subreddits to scrape
-MEDIA_DIRECTORY: Directory to save downloaded media
-Run the script in a Python environment.
+1. Clone or download the script to a directory on your computer.
+2. Install the required modules using `pip`.
+3. Create a Reddit account if you don't have one already.
+4. Create an application here.
+5. Create a `.env` file in the same directory as the script with the following variables:
+    * `CLIENT_ID`: Reddit API client ID
+    * `CLIENT_SECRET`: Reddit API client secret
+    * `USER_AGENT`: Reddit API user agent
+    * `SUBREDDIT_LIST`: Comma-separated list of subreddits to scrape
+    * `MEDIA_DIRECTORY`: Directory to save downloaded media
+    * `SOURCE_DIRECTORY`: The path to the directory where the JSON file storing the downloaded posts for each subreddit will be saved.
+6. Run the script using `python download_posts.py`.
 
 ## Usage
 
@@ -33,4 +36,17 @@ The script also keeps track of the downloaded posts for each subreddit in a JSON
 
 ## Note
 
-The Reddit API has a rate limit of 60 requests per minute. If you encounter any errors while using the script, try reducing the number of posts to download or adding a delay between requests.
+By default, the script downloads the 1000 latest posts from each subreddit. You can change this by modifying the post_num variable in the script.
+
+The clean_filename function removes invalid characters and trims the filename before saving the downloaded media. If you want to modify this function, you can do so in the script.
+
+The script uses the RedDownloader package to download media from Reddit. If you want to modify how media is downloaded (e.g., to download videos in a different format), you can do so in the script.
+
+## Contributing
+- Pull requests and bug reports are welcome!
+- Please see the [contributing guidelines](CONTRIBUTING.md) for more information.
+
+## License
+- This project is licensed under the MIT License.
+- See the [LICENSE](LICENSE) file for more information.
+
