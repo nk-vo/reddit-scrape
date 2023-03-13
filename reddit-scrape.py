@@ -2,78 +2,90 @@ from RedDownloader import RedDownloader
 import praw
 import os
 import re
-import sys
-import tkinter
-from tkinter import ttk
+import datetime
+import json
 from dotenv import load_dotenv
+
+from scrape_subreddit_posts import scrape_subreddit_posts
+
 load_dotenv()
 
 subreddit_list = os.getenv("SUBREDDIT_LIST").split(",")
 
-def clean_filename(filename, limit=260):
-    """
-    Remove invalid characters, URLs, trim, and reduce filename length
-    """
-    # Remove any URLs from the filename
-    url_pattern = re.compile(
-        r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+')
-    filename = url_pattern.sub('', filename)
+def clean_filename(filename, limit=259):
+  """
+  Remove invalid characters, URLs, trim, and reduce filename length
+  """
+  # Remove any URLs from the filename
+  url_pattern = re.compile(
+      r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+')
+  filename = url_pattern.sub('', filename)
 
-    # Remove any invalid characters from the filename
-    invalid_chars = re.compile(r'[\\/:*?"<>|]')
-    filename = invalid_chars.sub('', filename)
+  # Remove any invalid characters from the filename
+  invalid_chars = re.compile(r'[\\/:*?"<>|]')
+  filename = invalid_chars.sub('', filename)
 
-    # Trim the filename
-    filename = filename.strip()
+  # Trim the filename
+  filename = filename.strip()
 
-    # Reduce filename length if it exceeds the limit
-    if len(filename) > limit:
-        filename = filename[:limit]
+  # Reduce filename length if it exceeds the limit
+  if len(filename) > limit:
+    filename = filename[:limit]
 
-    return filename
+  return filename
 
 
-for subreddit_name in subreddit_list:
-    post_num = 1000  # Set the number of posts to download
+def download_posts():
+    start_time = datetime.datetime.now()
     url = "https://www.reddit.com"
+    post_num = 1000  # Set the number of posts to download
+    media_directory = os.getenv("MEDIA_DIRECTORY")
+    # Path to JSON file that stores the downloaded posts for each subreddit
+    posts_json_path = os.path.join(media_directory, "posts.json")
 
-    directory = "E:/Reddit-Scrape/"
-    # Path
-    path = os.path.join(directory, subreddit_name)
-
-    if not os.path.exists(path):
-        os.mkdir(path)
+    data = {}
+    if os.path.exists(posts_json_path):
+        with open(posts_json_path) as f:
+            data = json.load(f)
 
     reddit = praw.Reddit(client_id=os.getenv("CLIENT_ID"),
                          client_secret=os.getenv("CLIENT_SECRET"),
                          user_agent=os.getenv("USER_AGENT"))
-    try:
+
+    for subreddit_name in subreddit_list:
+        if subreddit_name not in data:
+            data[subreddit_name] = []
         hot_posts = reddit.subreddit(subreddit_name).new(limit=int(post_num))
-        count = 0
-        post_downloaded = 0
         for post in hot_posts:
-            permalink = post.permalink
             title = post.title
-            title = clean_filename(title)
-
-            if title == "":
-                while (os.path.exists(path + "/" + str(count) + ".mp4")):
-                    count += 1
-                title = str(count)
-            if not os.path.exists(path + "/" + title + ".mp4"):
-                if os.path.exists(path + "/" + title + ".jpeg"):
+            created_utc = post.created_utc
+            if not any(d['title'] == title for d in data[subreddit_name]):
+                data[subreddit_name].append({"title": title, "created_utc": int(created_utc)})
+                title_cleaned = clean_filename(title)
+                output = f"{title_cleaned}_{int(created_utc)}"
+                path = os.path.join(media_directory, subreddit_name)
+                if not os.path.exists(path):
+                    os.mkdir(path)
+                try:
+                    file = RedDownloader.Download(url + post.permalink, output=output, destination=path + "/")
+                    print(f"Downloaded {title_cleaned}")
+                except Exception as e:
+                    print(f"Error while downloading media from {subreddit_name}: {e}")
                     continue
-                file = RedDownloader.Download(
-                    url + permalink,
-                    output=title,
-                    quality=720,
-                    destination=path + "/")
-                post_downloaded += 1
 
-            if os.path.exists(path + "/" + title + ".jpeg"):
-                continue
-    except Exception as e:
-        print(f"Error while downloading media from {subreddit_name}: {e}")
-        continue
-    print("Downloaded " + str(post_downloaded) +
-          " posts from r/" + subreddit_name)
+    with open(posts_json_path, "w") as f:
+        json.dump(data, f, indent=2)
+
+    end_time = datetime.datetime.now()
+    time_elapsed = end_time - start_time
+    print("Posts downloaded:")
+    for subreddit_name, post_data in data.items():
+        post_count = len(post_data)
+        print(f"r/{subreddit_name}: {post_count}")
+
+    print(f"Time elapsed: {time_elapsed}")
+
+
+if __name__ == "__main__":
+  scrape_subreddit_posts()
+  download_posts()
