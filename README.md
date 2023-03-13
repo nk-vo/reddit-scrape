@@ -43,10 +43,11 @@ The clean_filename function removes invalid characters and trims the filename be
 The script uses the RedDownloader package to download media from Reddit. If you want to modify how media is downloaded (e.g., to download videos in a different format), you can do so in the script.
 
 ## Contributing
-- Pull requests and bug reports are welcome!
-- Please see the [contributing guidelines](CONTRIBUTING.md) for more information.
+
+* Pull requests and bug reports are welcome!
+* Please see the [contributing guidelines](CONTRIBUTING.md) for more information.
 
 ## License
-- This project is licensed under the MIT License.
-- See the [LICENSE](LICENSE) file for more information.
 
+* This project is licensed under the MIT License.
+* See the [LICENSE](LICENSE) file for more information.
