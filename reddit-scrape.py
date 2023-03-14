@@ -54,6 +54,7 @@ def download_posts():
                         client_secret=os.getenv("CLIENT_SECRET"),
                         user_agent=os.getenv("USER_AGENT"))
 
+  subreddit_downloaded = {subreddit_name: 0 for subreddit_name in subreddit_list}
   for subreddit_name in subreddit_list:
     if subreddit_name not in data:
       data[subreddit_name] = []
@@ -70,18 +71,18 @@ def download_posts():
           os.mkdir(path)
         try:
           RedDownloader.Download(url + post.permalink, output=output, destination=path + "/")
+          subreddit_downloaded[subreddit_name] += 1
         except Exception as e:
           print(f"Error while downloading media from {subreddit_name}: {e}")
           continue
-
+    
   with open(posts_json_path, "w") as f:
       json.dump(data, f, indent=2)
 
   end_time = datetime.datetime.now()
   time_elapsed = end_time - start_time
   print("Posts downloaded:")
-  for subreddit_name, post_data in data.items():
-      post_count = len(post_data)
+  for subreddit_name, post_count in subreddit_downloaded.items():
       print(f"r/{subreddit_name}: {post_count}")
 
   print(f"Time elapsed: {time_elapsed}")
