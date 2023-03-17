@@ -2,8 +2,9 @@ from RedDownloader import RedDownloader
 import praw
 import os
 import re
-import datetime
 import json
+import time
+from tabulate import tabulate
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -34,14 +35,14 @@ def clean_filename(filename, limit=259):
 
 
 def download_posts():
-  start_time = datetime.datetime.now()
   url = "https://www.reddit.com"
-  post_num = 1000  # Set the number of posts to download
+  post_num = 10000  # Set the number of posts to download
   media_directory = os.getenv("MEDIA_DIRECTORY")
   # Path to JSON file that stores the downloaded posts for each subreddit
   source_directory = os.getenv("SOURCE_DIRECTORY")
   posts_json_path = os.path.join(source_directory, "posts.json")
 
+  print("Loading posts from JSON...")
   data = {}
   if os.path.exists(posts_json_path):
     with open(posts_json_path) as f:
@@ -49,19 +50,26 @@ def download_posts():
   else:
     with open(posts_json_path, "w") as f:
       json.dump(data, f, indent=2)
-      
+  
+  print("Authenticating...")
   reddit = praw.Reddit(client_id=os.getenv("CLIENT_ID"),
                         client_secret=os.getenv("CLIENT_SECRET"),
                         user_agent=os.getenv("USER_AGENT"))
 
-  subreddit_downloaded = {subreddit_name: 0 for subreddit_name in subreddit_list}
+  print("Downloading posts...")
+  subreddit_downloaded = {subreddit_name: {"count": 0, "download_time": 0} for subreddit_name in subreddit_list}
   for subreddit_name in subreddit_list:
     if subreddit_name not in data:
       data[subreddit_name] = []
     hot_posts = reddit.subreddit(subreddit_name).new(limit=int(post_num))
+    
+    download_start_time = time.time()
+    
+    print("Checking if posts have been downloaded from r/" + subreddit_name)
     for post in hot_posts:
       title = post.title
       created_utc = post.created_utc
+      
       if not any(d['title'] == title and d['created_utc'] == int(created_utc) for d in data[subreddit_name]):
         data[subreddit_name].append({"title": title, "created_utc": int(created_utc)})
         title_cleaned = clean_filename(title)
@@ -71,22 +79,31 @@ def download_posts():
           os.mkdir(path)
         try:
           RedDownloader.Download(url + post.permalink, output=output, destination=path + "/")
-          subreddit_downloaded[subreddit_name] += 1
+          subreddit_downloaded[subreddit_name]["count"] += 1
         except Exception as e:
-          print(f"Error while downloading media from {subreddit_name}: {e}")
+          print(f"Error while downloading media from {subreddit_name}: {e}") 
           continue
+        
+    download_end_time = time.time()
+    subreddit_downloaded[subreddit_name]["download_time"] = download_end_time - download_start_time
     
+  print("Saving posts to JSON...")
   with open(posts_json_path, "w") as f:
       json.dump(data, f, indent=2)
-
-  end_time = datetime.datetime.now()
-  time_elapsed = end_time - start_time
+  
+  print("Done!")
+  
+  total_count = sum(stats['count'] for stats in subreddit_downloaded.values())
+  total_time = sum(stats['download_time'] for stats in subreddit_downloaded.values())
+  
   print("Posts downloaded:")
-  for subreddit_name, post_count in subreddit_downloaded.items():
-      print(f"r/{subreddit_name}: {post_count}")
-
-  print(f"Time elapsed: {time_elapsed}")
-
+  table_data = [["Subreddit", "Posts Downloaded", "Download Time (seconds))"]]
+  for subreddit_name, stats in subreddit_downloaded.items():
+      table_data.append([f"r/{subreddit_name}", f"{stats['count']}", f"{round(stats['download_time'] % 60, 2)}"])
+      
+  table_data.append(["Total", total_count, round(total_time, 2)])
+  
+  print(tabulate(table_data, headers="firstrow", tablefmt="rounded_grid"))
 
 if __name__ == "__main__":
   download_posts()
