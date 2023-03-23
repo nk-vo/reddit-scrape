@@ -1,11 +1,12 @@
-from RedDownloader import RedDownloader
-import praw
+import json
 import os
 import re
-import json
 import time
-from tabulate import tabulate
+
+import praw
 from dotenv import load_dotenv
+from RedDownloader import RedDownloader
+from tabulate import tabulate
 
 load_dotenv()
 
@@ -84,6 +85,9 @@ def download_posts():
           print(f"Error while downloading media from {subreddit_name}: {e}") 
           continue
         
+      if subreddit_downloaded[subreddit_name]["count"] == 0:
+        print("No new posts found from r/" + subreddit_name)
+        
     download_end_time = time.time()
     subreddit_downloaded[subreddit_name]["download_time"] = download_end_time - download_start_time
     
@@ -91,7 +95,7 @@ def download_posts():
   with open(posts_json_path, "w") as f:
       json.dump(data, f, indent=2)
   
-  print("Done!")
+  print("Done at " + time.strftime("%H:%M:%S"))
   
   total_count = sum(stats['count'] for stats in subreddit_downloaded.values())
   total_time = sum(stats['download_time'] for stats in subreddit_downloaded.values())
