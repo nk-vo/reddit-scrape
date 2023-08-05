@@ -62,11 +62,21 @@ def download_posts():
   for subreddit_name in subreddit_list:
     if subreddit_name not in data:
       data[subreddit_name] = []
-    hot_posts = reddit.subreddit(subreddit_name).new(limit=int(post_num))
+    try:
+        hot_posts = reddit.subreddit(subreddit_name).new(limit=int(post_num))
+    except praw.exceptions.NotFound as e:
+        print(f"Subreddit r/{subreddit_name} does not exist. Skipping...")
+        continue
     
     download_start_time = time.time()
     
     print("Checking if posts have been downloaded from r/" + subreddit_name)
+    
+    # Create the media_directory if it does not exist
+    path = os.path.join(media_directory, subreddit_name)
+    if not os.path.exists(path):
+        os.makedirs(path)
+            
     for post in hot_posts:
       title = post.title
       created_utc = post.created_utc
@@ -76,6 +86,7 @@ def download_posts():
         title_cleaned = clean_filename(title)
         output = f"{title_cleaned}_{int(created_utc)}"
         path = os.path.join(media_directory, subreddit_name)
+        print("Downloading from r/" + subreddit_name + ": " + title)
         if not os.path.exists(path):
           os.mkdir(path)
         try:
@@ -85,15 +96,22 @@ def download_posts():
           print(f"Error while downloading media from {subreddit_name}: {e}") 
           continue
         
-      if subreddit_downloaded[subreddit_name]["count"] == 0:
-        print("No new posts found from r/" + subreddit_name)
+      print("Saving posts to JSON...")
+      with open(posts_json_path, "w") as f:
+        try:
+            json.dump(data, f, indent=2)
+            print("Data successfully written to JSON.")
+        except Exception as e:
+            print("Error while saving data to JSON:", e)
+        
+    if subreddit_downloaded[subreddit_name]["count"] == 0:
+      print("No new posts found from r/" + subreddit_name)
         
     download_end_time = time.time()
     subreddit_downloaded[subreddit_name]["download_time"] = download_end_time - download_start_time
+  
     
-  print("Saving posts to JSON...")
-  with open(posts_json_path, "w") as f:
-      json.dump(data, f, indent=2)
+  
   
   print("Done at " + time.strftime("%H:%M:%S"))
   
@@ -101,7 +119,7 @@ def download_posts():
   total_time = sum(stats['download_time'] for stats in subreddit_downloaded.values())
   
   print("Posts downloaded:")
-  table_data = [["Subreddit", "Posts Downloaded", "Download Time (seconds))"]]
+  table_data = [["Subreddit", "Posts Downloaded", "Download Time (seconds)"]]
   for subreddit_name, stats in subreddit_downloaded.items():
       table_data.append([f"r/{subreddit_name}", f"{stats['count']}", f"{round(stats['download_time'] % 60, 2)}"])
       
